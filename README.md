@@ -6,7 +6,7 @@
 
 A Bevy plugin for creating tiled, animated UI backgrounds with support for rotation, staggering, spacing, and scrolling animation.
 
-![Example](https://raw.githubusercontent.com/mirsella/bevy_tiled_background/main/assets/example.gif)
+![Example](https://raw.githubusercontent.com/mirsella/bevy_tiled_background/main/assets/screenshot.png)
 
 ## Features
 
