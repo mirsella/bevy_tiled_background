@@ -14,17 +14,13 @@ readme = "README.md"
 
 [dependencies]
 bevy = { version = "0.16", default-features = false, features = [
-    "bevy_asset",
-    "bevy_render",
-    "bevy_ui",
+  "bevy_asset",
+  "bevy_render",
+  "bevy_ui",
 ] }
 
 [dev-dependencies]
-bevy = { version = "0.16", default-features = false, features = [
-    "bevy_winit",
-    "x11",
-    "png",
-] }
+bevy = { version = "0.16" }
 
 [[example]]
 name = "simple"

@@ -23,7 +23,7 @@ fn setup(
         stagger: 0.5,
         spacing: 0.7,
         scroll_speed: Vec2::new(30.0, 0.0),
-        pattern_texture: asset_server.load("assets/background_logo.png"),
+        pattern_texture: asset_server.load("background_logo.png"),
     });
 
     commands.spawn((
