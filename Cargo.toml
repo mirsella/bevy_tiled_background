@@ -25,3 +25,7 @@ bevy = { version = "0.16", default-features = false, features = [
     "x11",
     "png",
 ] }
+
+[[example]]
+name = "simple"
+path = "examples/simple.rs"
