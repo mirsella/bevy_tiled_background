@@ -45,10 +45,8 @@
 //! ```
 
 use bevy::{
-    asset::embedded_asset,
-    prelude::*,
-    render::render_resource::{AsBindGroup, ShaderRef},
-    ui::UiMaterial,
+    asset::embedded_asset, prelude::*, render::render_resource::AsBindGroup, shader::ShaderRef,
+    ui_render::ui_material::UiMaterial,
 };
 
 /// Plugin that registers the [`TiledBackgroundMaterial`] for use in UI.
