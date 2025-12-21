@@ -34,23 +34,22 @@ fn fragment(in: UiVertexOutput) -> @location(0) vec4<f32> {
 
     // Calculate tile dimensions based on scale (multiplier of native texture size)
     let tex_dims = textureDimensions(pattern_texture);
-    let tile_size = vec2<f32>(tex_dims) * material.scale;
-    let tile_height = tile_size.y;
-    let tile_width = tile_size.x;
+    let image_size = vec2<f32>(tex_dims) * material.scale;
+    // Cell size = image size + spacing (spacing is the gap in pixels between images)
+    let cell_size = image_size + material.spacing;
 
     // Stagger rows for brick-like pattern
-    let row = floor(rotated_pos.y / tile_height);
-    rotated_pos.x += row * material.stagger * tile_width;
+    let row = floor(rotated_pos.y / cell_size.y);
+    rotated_pos.x += row * material.stagger * cell_size.x;
 
-    // Local UV within the tile [0, 1]
-    let local_uv = fract(rotated_pos / tile_size);
+    // Position within the cell
+    let cell_pos = rotated_pos - floor(rotated_pos / cell_size) * cell_size;
 
-    // Spacing/Padding - creates gaps between tiles
-    let margin = (1.0 - material.spacing) * 0.5;
-    if (local_uv.x >= margin && local_uv.x <= (1.0 - margin) &&
-        local_uv.y >= margin && local_uv.y <= (1.0 - margin)) {
+    // Check if we're within the image portion of the cell (not in the spacing gap)
+    if (cell_pos.x >= 0.0 && cell_pos.x < image_size.x &&
+        cell_pos.y >= 0.0 && cell_pos.y < image_size.y) {
         
-        let sample_uv = (local_uv - margin) / material.spacing;
+        let sample_uv = cell_pos / image_size;
         let tex_color = textureSample(pattern_texture, pattern_sampler, sample_uv);
         return vec4<f32>(material.pattern_color.rgb, tex_color.a * material.pattern_color.a);
     }

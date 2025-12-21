@@ -28,7 +28,7 @@
 //!         scale: 0.5,
 //!         rotation: 35f32.to_radians(),
 //!         stagger: 0.5,
-//!         spacing: 0.8,
+//!         spacing: 10.0,
 //!         scroll_speed: Vec2::new(20.0, 0.0),
 //!         pattern_texture: asset_server.load("my_pattern.png"),
 //!     });
@@ -63,30 +63,27 @@ impl Plugin for TiledBackgroundPlugin {
 }
 
 /// A UI material that renders a tiled, animated pattern.
-///
-/// # Fields
-///
-/// * `pattern_color` - Tint color applied to the pattern (alpha controls opacity)
-/// * `scale` - Size multiplier for tiles (1.0 = native texture size)
-/// * `rotation` - Rotation angle in radians
-/// * `stagger` - Row offset for brick-like patterns (0.5 = half-tile shift)
-/// * `spacing` - How much of each tile the image fills (0.0-1.0, 1.0 = no gaps)
-/// * `scroll_speed` - Animation speed in pixels per second (x, y)
-/// * `pattern_texture` - The texture to tile
 #[derive(AsBindGroup, Asset, Debug, Clone, Reflect)]
 pub struct TiledBackgroundMaterial {
+    /// Tint color applied to the pattern. Alpha controls opacity.
     #[uniform(0)]
     pub pattern_color: LinearRgba,
+    /// Size multiplier for tiles. `1.0` = native texture size.
     #[uniform(0)]
     pub scale: f32,
+    /// Rotation angle in radians.
     #[uniform(0)]
     pub rotation: f32,
+    /// Row offset for brick-like patterns. `0.5` = half-tile shift.
     #[uniform(0)]
     pub stagger: f32,
+    /// Gap between images in pixels. `0.0` = no gaps.
     #[uniform(0)]
     pub spacing: f32,
+    /// Animation speed in pixels per second.
     #[uniform(0)]
     pub scroll_speed: Vec2,
+    /// The texture to tile.
     #[texture(1)]
     #[sampler(2)]
     pub pattern_texture: Handle<Image>,
@@ -99,7 +96,7 @@ impl Default for TiledBackgroundMaterial {
             scale: 1.0,
             rotation: 0.0,
             stagger: 0.0,
-            spacing: 1.0,
+            spacing: 0.0,
             scroll_speed: Vec2::ZERO,
             pattern_texture: Handle::default(),
         }
