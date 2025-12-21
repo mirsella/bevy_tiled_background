@@ -79,18 +79,18 @@ impl Plugin for TiledBackgroundPlugin {
 pub struct TiledBackgroundMaterial {
     #[uniform(0)]
     pub pattern_color: LinearRgba,
-    #[uniform(1)]
+    #[uniform(0)]
     pub scale: f32,
-    #[uniform(2)]
+    #[uniform(0)]
     pub rotation: f32,
-    #[uniform(3)]
+    #[uniform(0)]
     pub stagger: f32,
-    #[uniform(4)]
+    #[uniform(0)]
     pub spacing: f32,
-    #[uniform(5)]
+    #[uniform(0)]
     pub scroll_speed: Vec2,
-    #[texture(6)]
-    #[sampler(7)]
+    #[texture(1)]
+    #[sampler(2)]
     pub pattern_texture: Handle<Image>,
 }
 
