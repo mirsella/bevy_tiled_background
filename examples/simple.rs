@@ -21,7 +21,7 @@ fn setup(
         scale: 0.5,
         rotation: 20f32.to_radians(),
         stagger: 0.5,
-        spacing: 0.7,
+        spacing: 40.,
         scroll_speed: Vec2::new(30.0, 0.0),
         pattern_texture: asset_server.load("background_logo.png"),
     });
