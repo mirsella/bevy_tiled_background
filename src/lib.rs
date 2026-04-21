@@ -24,7 +24,7 @@
 //!     commands.spawn(Camera2d);
 //!
 //!     let material = materials.add(TiledBackgroundMaterial {
-//!         pattern_color: LinearRgba::WHITE,
+//!         color: LinearRgba::WHITE,
 //!         scale: 0.5,
 //!         rotation: 35f32.to_radians(),
 //!         stagger: 0.5,
@@ -65,9 +65,9 @@ impl Plugin for TiledBackgroundPlugin {
 /// A UI material that renders a tiled, animated pattern.
 #[derive(AsBindGroup, Asset, Debug, Clone, Reflect)]
 pub struct TiledBackgroundMaterial {
-    /// Tint color applied to the pattern. Alpha controls opacity.
+    /// Tint color multiplied with the pattern texture. Use white for no tint.
     #[uniform(0)]
-    pub pattern_color: LinearRgba,
+    pub color: LinearRgba,
     /// Size multiplier for tiles. `1.0` = native texture size.
     #[uniform(0)]
     pub scale: f32,
@@ -92,7 +92,7 @@ pub struct TiledBackgroundMaterial {
 impl Default for TiledBackgroundMaterial {
     fn default() -> Self {
         Self {
-            pattern_color: LinearRgba::WHITE,
+            color: LinearRgba::WHITE,
             scale: 1.0,
             rotation: 0.0,
             stagger: 0.0,

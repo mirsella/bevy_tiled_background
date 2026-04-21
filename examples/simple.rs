@@ -17,7 +17,7 @@ fn setup(
     commands.spawn(Camera2d);
 
     let material = materials.add(TiledBackgroundMaterial {
-        pattern_color: Color::WHITE.with_alpha(0.15).into(),
+        color: Color::WHITE.with_alpha(0.15).into(),
         scale: 0.5,
         rotation: 20f32.to_radians(),
         stagger: 0.5,

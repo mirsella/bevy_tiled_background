@@ -2,7 +2,7 @@
 #import bevy_render::globals::Globals
 
 struct TiledMaterial {
-    pattern_color: vec4<f32>,
+    color: vec4<f32>,
     scale: f32,
     rotation: f32,
     stagger: f32,
@@ -57,7 +57,7 @@ fn fragment(in: UiVertexOutput) -> @location(0) vec4<f32> {
         
         let sample_uv = cell_pos / image_size;
         let tex_color = textureSampleGrad(pattern_texture, pattern_sampler, sample_uv, ddx, ddy);
-        return vec4<f32>(material.pattern_color.rgb, tex_color.a * material.pattern_color.a);
+        return tex_color * material.color;
     }
 
     return vec4<f32>(0.0, 0.0, 0.0, 0.0);

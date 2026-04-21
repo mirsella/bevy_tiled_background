@@ -51,7 +51,7 @@ fn setup(
     commands.spawn(Camera2d);
 
     let material = materials.add(TiledBackgroundMaterial {
-        pattern_color: LinearRgba::WHITE,
+        color: LinearRgba::WHITE,
         scale: 0.5,
         rotation: 35f32.to_radians(),
         stagger: 0.5,
@@ -75,7 +75,7 @@ fn setup(
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `pattern_color` | `LinearRgba` | Tint color (alpha controls opacity) |
+| `color` | `LinearRgba` | Tint multiplied with the texture (`WHITE` = no tint, alpha controls opacity) |
 | `scale` | `f32` | Size multiplier (1.0 = native texture size) |
 | `rotation` | `f32` | Rotation angle in radians |
 | `stagger` | `f32` | Row offset (0.5 = half-tile shift for brick pattern) |
