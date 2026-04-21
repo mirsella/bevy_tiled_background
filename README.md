@@ -27,7 +27,7 @@ Or add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_tiled_background = "0.1"
+bevy_tiled_background = "0.3"
 ```
 
 ## Usage
@@ -87,7 +87,7 @@ fn setup(
 
 | bevy | bevy_tiled_background |
 |------|----------------------|
-| 0.16 | 0.1                  |
+| 0.17 | 0.3                  |
 
 ## License
 
