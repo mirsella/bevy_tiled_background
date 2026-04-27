@@ -8,6 +8,7 @@ struct TiledMaterial {
     stagger: f32,
     spacing: f32,
     scroll_speed: vec2<f32>,
+    pixel_scale: f32,
 }
 
 @group(0) @binding(1) var<uniform> globals: Globals;
@@ -17,8 +18,9 @@ struct TiledMaterial {
 
 @fragment
 fn fragment(in: UiVertexOutput) -> @location(0) vec4<f32> {
-    // Use absolute pixel coordinates centered on the node
-    let pos = (in.uv - 0.5) * in.size;
+    // UiVertexOutput::size is in physical render pixels. Convert to logical UI
+    // pixels so scale, spacing, and scroll_speed match Bevy's Val::Px behavior.
+    let pos = (in.uv - 0.5) * in.size / material.pixel_scale;
 
     // Rotate the coordinate space
     let s = sin(material.rotation);

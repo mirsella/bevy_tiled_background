@@ -18,6 +18,7 @@ bevy = { version = "0.17", default-features = false, features = [
   "bevy_render",
   "bevy_ui",
   "bevy_ui_render",
+  "bevy_log",
 ] }
 
 [dev-dependencies]

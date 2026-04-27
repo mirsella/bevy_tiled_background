@@ -24,6 +24,7 @@ fn setup(
         spacing: 40.,
         scroll_speed: Vec2::new(30.0, 0.0),
         pattern_texture: asset_server.load("background_logo.png"),
+        ..default()
     });
 
     commands.spawn((

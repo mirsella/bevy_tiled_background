@@ -31,6 +31,7 @@
 //!         spacing: 10.0,
 //!         scroll_speed: Vec2::new(20.0, 0.0),
 //!         pattern_texture: asset_server.load("my_pattern.png"),
+//!         ..default()
 //!     });
 //!
 //!     commands.spawn((
@@ -45,8 +46,12 @@
 //! ```
 
 use bevy::{
-    asset::embedded_asset, prelude::*, render::render_resource::AsBindGroup, shader::ShaderRef,
+    asset::embedded_asset,
+    prelude::*,
+    render::render_resource::AsBindGroup,
+    shader::ShaderRef,
     ui_render::ui_material::UiMaterial,
+    window::{PrimaryWindow, WindowScaleFactorChanged},
 };
 
 /// Plugin that registers the [`TiledBackgroundMaterial`] for use in UI.
@@ -58,7 +63,15 @@ impl Plugin for TiledBackgroundPlugin {
 
         app.register_type::<TiledBackgroundMaterial>()
             .register_asset_reflect::<TiledBackgroundMaterial>()
-            .add_plugins(UiMaterialPlugin::<TiledBackgroundMaterial>::default());
+            .add_plugins(UiMaterialPlugin::<TiledBackgroundMaterial>::default())
+            .add_systems(
+                Update,
+                update_tiled_background_pixel_scale.run_if(
+                    run_once
+                        .or(on_message::<WindowScaleFactorChanged>)
+                        .or(any_match_filter::<Changed<MaterialNode<TiledBackgroundMaterial>>>),
+                ),
+            );
     }
 }
 
@@ -83,6 +96,12 @@ pub struct TiledBackgroundMaterial {
     /// Animation speed in pixels per second.
     #[uniform(0)]
     pub scroll_speed: Vec2,
+    /// Pixel scale used to convert physical render pixels to logical UI pixels.
+    ///
+    /// This is managed by [`TiledBackgroundPlugin`]. Leave it at `1.0` when
+    /// constructing materials manually.
+    #[uniform(0)]
+    pub pixel_scale: f32,
     /// The texture to tile.
     #[texture(1)]
     #[sampler(2)]
@@ -98,6 +117,7 @@ impl Default for TiledBackgroundMaterial {
             stagger: 0.0,
             spacing: 0.0,
             scroll_speed: Vec2::ZERO,
+            pixel_scale: 1.0,
             pattern_texture: Handle::default(),
         }
     }
@@ -106,5 +126,38 @@ impl Default for TiledBackgroundMaterial {
 impl UiMaterial for TiledBackgroundMaterial {
     fn fragment_shader() -> ShaderRef {
         "embedded://bevy_tiled_background/tiled_background.wgsl".into()
+    }
+}
+
+fn update_tiled_background_pixel_scale(
+    windows: Query<&Window, With<PrimaryWindow>>,
+    mut materials: ResMut<Assets<TiledBackgroundMaterial>>,
+    backgrounds: Query<&MaterialNode<TiledBackgroundMaterial>>,
+) {
+    if backgrounds.is_empty() {
+        return;
+    }
+
+    let Ok(window) = windows.single() else {
+        return warn_once!(
+            "tiled background scale update skipped because the primary window is missing"
+        );
+    };
+
+    let pixel_scale = window.scale_factor() as f32;
+    if !pixel_scale.is_finite() || pixel_scale <= 0. {
+        return warn_once!(
+            pixel_scale,
+            "tiled background scale update skipped due to invalid window scale factor"
+        );
+    }
+
+    for material_node in &backgrounds {
+        let Some(material) = materials.get_mut(&material_node.0) else {
+            warn_once!("tiled background material asset is missing");
+            continue;
+        };
+
+        material.pixel_scale = pixel_scale;
     }
 }
