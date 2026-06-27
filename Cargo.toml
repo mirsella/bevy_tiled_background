@@ -2,7 +2,7 @@
 name = "bevy_tiled_background"
 version = "0.4.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.95.0"
 license = "MIT OR Apache-2.0"
 description = "A Bevy plugin for creating tiled, animated UI backgrounds with rotation, staggering, and scrolling"
 repository = "https://github.com/mirsella/bevy_tiled_background"
@@ -13,7 +13,7 @@ categories = ["game-development", "graphics", "rendering"]
 readme = "README.md"
 
 [dependencies]
-bevy = { version = "0.17", default-features = false, features = [
+bevy = { version = "0.19.0", default-features = false, features = [
   "bevy_asset",
   "bevy_render",
   "bevy_ui",
@@ -22,7 +22,7 @@ bevy = { version = "0.17", default-features = false, features = [
 ] }
 
 [dev-dependencies]
-bevy = { version = "0.17" }
+bevy = { version = "0.19.0" }
 
 [[example]]
 name = "simple"

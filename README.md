@@ -106,6 +106,7 @@ cargo run --example simple
 
 | Bevy | bevy_tiled_background |
 |------|-----------------------|
+| 0.19 | 0.4                   |
 | 0.17 | 0.4                   |
 
 ## License
