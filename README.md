@@ -35,7 +35,7 @@ Or add it manually:
 
 ```toml
 [dependencies]
-bevy_tiled_background = "0.4"
+bevy_tiled_background = "0.5"
 ```
 
 ## Quick Start
@@ -106,7 +106,7 @@ cargo run --example simple
 
 | Bevy | bevy_tiled_background |
 |------|-----------------------|
-| 0.19 | 0.4                   |
+| 0.19 | 0.5                   |
 | 0.17 | 0.4                   |
 
 ## License
