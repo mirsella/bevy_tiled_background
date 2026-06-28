@@ -68,8 +68,10 @@ impl Plugin for TiledBackgroundPlugin {
                 Update,
                 update_tiled_background_pixel_scale.run_if(
                     run_once
-                        .or(on_message::<WindowScaleFactorChanged>)
-                        .or(any_match_filter::<Changed<MaterialNode<TiledBackgroundMaterial>>>),
+                        .or_else(on_message::<WindowScaleFactorChanged>)
+                        .or_else(
+                            any_match_filter::<Changed<MaterialNode<TiledBackgroundMaterial>>>,
+                        ),
                 ),
             );
     }
@@ -144,7 +146,7 @@ fn update_tiled_background_pixel_scale(
         );
     };
 
-    let pixel_scale = window.scale_factor() as f32;
+    let pixel_scale = window.scale_factor();
     if !pixel_scale.is_finite() || pixel_scale <= 0. {
         return warn_once!(
             pixel_scale,
@@ -153,7 +155,7 @@ fn update_tiled_background_pixel_scale(
     }
 
     for material_node in &backgrounds {
-        let Some(material) = materials.get_mut(&material_node.0) else {
+        let Some(mut material) = materials.get_mut(&material_node.0) else {
             warn_once!("tiled background material asset is missing");
             continue;
         };
