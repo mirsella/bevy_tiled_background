@@ -1,5 +1,4 @@
-#import bevy_ui::ui_vertex_output::UiVertexOutput
-#import bevy_render::globals::Globals
+#import bevy_render::{globals::Globals, view::View}
 
 struct TiledMaterial {
     color: vec4<f32>,
@@ -16,51 +15,56 @@ struct TiledMaterial {
 @group(1) @binding(1) var pattern_texture: texture_2d<f32>;
 @group(1) @binding(2) var pattern_sampler: sampler;
 
+struct TiledVertexOutput {
+    @location(0) tile_position: vec2<f32>,
+    @location(1) @interpolate(flat) image_size: vec2<f32>,
+    @builtin(position) clip_position: vec4<f32>,
+}
+
+@group(0) @binding(0) var<uniform> view: View;
+
+@vertex
+fn vertex(
+    @location(0) vertex_position: vec3<f32>,
+    @location(1) vertex_uv: vec2<f32>,
+    @location(2) size: vec2<f32>,
+) -> TiledVertexOutput {
+    var out: TiledVertexOutput;
+    out.clip_position = view.clip_from_world * vec4<f32>(vertex_position, 1.0);
+
+    // UI vertex sizes are physical render pixels; material values use logical pixels.
+    let pos = (vertex_uv - 0.5) * size / material.pixel_scale;
+    let rotation = vec2(cos(material.rotation), sin(material.rotation));
+    out.tile_position = mat2x2(rotation, vec2(-rotation.y, rotation.x)) * pos
+        + material.scroll_speed * globals.time;
+    out.image_size = vec2<f32>(textureDimensions(pattern_texture)) * material.scale;
+    return out;
+}
+
 @fragment
-fn fragment(in: UiVertexOutput) -> @location(0) vec4<f32> {
-    // UiVertexOutput::size is in physical render pixels. Convert to logical UI
-    // pixels so scale, spacing, and scroll_speed match Bevy's Val::Px behavior.
-    let pos = (in.uv - 0.5) * in.size / material.pixel_scale;
+fn fragment(in: TiledVertexOutput) -> @location(0) vec4<f32> {
+    var tile_position = in.tile_position;
+    let cell_size = in.image_size + material.spacing;
 
-    // Rotate the coordinate space
-    let s = sin(material.rotation);
-    let c = cos(material.rotation);
-    var rotated_pos = vec2<f32>(
-        c * pos.x - s * pos.y,
-        s * pos.x + c * pos.y
-    );
+    // Explicit gradients avoid seams and WebGPU's ban on implicit derivatives in branches.
+    let uv_scale = 1.0 / in.image_size;
+    let ddx = dpdx(tile_position) * uv_scale;
+    let ddy = dpdy(tile_position) * uv_scale;
 
-    // Apply scrolling (scroll_speed is in pixels per second)
-    rotated_pos += material.scroll_speed * globals.time;
+    let row = floor(tile_position.y / cell_size.y);
+    tile_position.x += row * material.stagger * cell_size.x;
 
-    // Calculate tile dimensions based on scale (multiplier of native texture size)
-    let tex_dims = textureDimensions(pattern_texture);
-    let image_size = vec2<f32>(tex_dims) * material.scale;
-    
-    // Calculate gradients based on the continuous coordinate space to avoid seams at tile boundaries
-    // and to support WebGPU which forbids implicit derivatives in non-uniform control flow.
-    let uv_scale = 1.0 / image_size;
-    let ddx = dpdx(rotated_pos) * uv_scale;
-    let ddy = dpdy(rotated_pos) * uv_scale;
+    let cell_position = tile_position - floor(tile_position / cell_size) * cell_size;
 
-    // Cell size = image size + spacing (spacing is the gap in pixels between images)
-    let cell_size = image_size + material.spacing;
-
-    // Stagger rows for brick-like pattern
-    let row = floor(rotated_pos.y / cell_size.y);
-    rotated_pos.x += row * material.stagger * cell_size.x;
-
-    // Position within the cell
-    let cell_pos = rotated_pos - floor(rotated_pos / cell_size) * cell_size;
-
-    // Check if we're within the image portion of the cell (not in the spacing gap)
-    if (cell_pos.x >= 0.0 && cell_pos.x < image_size.x &&
-        cell_pos.y >= 0.0 && cell_pos.y < image_size.y) {
-        
-        let sample_uv = cell_pos / image_size;
-        let tex_color = textureSampleGrad(pattern_texture, pattern_sampler, sample_uv, ddx, ddy);
-        return tex_color * material.color;
+    if all(cell_position >= vec2(0.0)) && all(cell_position < in.image_size) {
+        return textureSampleGrad(
+            pattern_texture,
+            pattern_sampler,
+            cell_position / in.image_size,
+            ddx,
+            ddy,
+        ) * material.color;
     }
 
-    return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    return vec4(0.0);
 }

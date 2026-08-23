@@ -126,6 +126,10 @@ impl Default for TiledBackgroundMaterial {
 }
 
 impl UiMaterial for TiledBackgroundMaterial {
+    fn vertex_shader() -> ShaderRef {
+        "embedded://bevy_tiled_background/tiled_background.wgsl".into()
+    }
+
     fn fragment_shader() -> ShaderRef {
         "embedded://bevy_tiled_background/tiled_background.wgsl".into()
     }
@@ -160,6 +164,8 @@ fn update_tiled_background_pixel_scale(
             continue;
         };
 
-        material.pixel_scale = pixel_scale;
+        if material.pixel_scale != pixel_scale {
+            material.pixel_scale = pixel_scale;
+        }
     }
 }
