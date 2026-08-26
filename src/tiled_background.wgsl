@@ -2,11 +2,13 @@
 
 struct TiledMaterial {
     color: vec4<f32>,
-    scale: f32,
-    rotation: f32,
-    stagger: f32,
-    spacing: f32,
-    scroll_speed: vec2<f32>,
+    image_scale: f32,
+    image_rotation: f32,
+    lattice: mat2x2<f32>,
+    origin: vec2<f32>,
+    reference_size: vec2<f32>,
+    scroll_velocity: vec2<f32>,
+    checkerboard_parity: i32,
     pixel_scale: f32,
 }
 
@@ -16,8 +18,9 @@ struct TiledMaterial {
 @group(1) @binding(2) var pattern_sampler: sampler;
 
 struct TiledVertexOutput {
-    @location(0) tile_position: vec2<f32>,
-    @location(1) @interpolate(flat) image_size: vec2<f32>,
+    @location(0) lattice_position: vec2<f32>,
+    @location(1) @interpolate(flat) image_basis_u: vec2<f32>,
+    @location(2) @interpolate(flat) image_basis_v: vec2<f32>,
     @builtin(position) clip_position: vec4<f32>,
 }
 
@@ -33,37 +36,77 @@ fn vertex(
     out.clip_position = view.clip_from_world * vec4<f32>(vertex_position, 1.0);
 
     // UI vertex sizes are physical render pixels; material values use logical pixels.
-    let pos = (vertex_uv - 0.5) * size / material.pixel_scale;
-    let rotation = vec2(cos(material.rotation), sin(material.rotation));
-    out.tile_position = mat2x2(rotation, vec2(-rotation.y, rotation.x)) * pos
-        + material.scroll_speed * globals.time;
-    out.image_size = vec2<f32>(textureDimensions(pattern_texture)) * material.scale;
+    let logical_size = size / material.pixel_scale;
+    var pattern_position = (vertex_uv - 0.5) * logical_size;
+    var cover_scale = 1.0;
+    if all(material.reference_size > vec2(0.0)) {
+        cover_scale = max(
+            logical_size.x / material.reference_size.x,
+            logical_size.y / material.reference_size.y,
+        );
+        pattern_position = pattern_position / cover_scale + material.reference_size * 0.5;
+    }
+
+    let image_size = vec2<f32>(textureDimensions(pattern_texture)) * material.image_scale;
+    var lattice = material.lattice;
+    if all(lattice[0] == vec2(0.0)) && all(lattice[1] == vec2(0.0)) {
+        lattice = mat2x2(
+            vec2(image_size.x, 0.0),
+            vec2(0.0, image_size.y),
+        );
+    }
+    let offset = pattern_position
+        - material.origin
+        - material.scroll_velocity * globals.time / cover_scale;
+    out.lattice_position = vec2(
+        dot(vec2(lattice[1].y, -lattice[1].x), offset),
+        dot(vec2(-lattice[0].y, lattice[0].x), offset),
+    ) / determinant(lattice) + 0.5;
+
+    let rotation = vec2(cos(material.image_rotation), sin(material.image_rotation));
+    let image_from_pattern = mat2x2(
+        vec2(rotation.x, -rotation.y) / image_size,
+        vec2(rotation.y, rotation.x) / image_size,
+    );
+    out.image_basis_u = image_from_pattern * lattice[0];
+    out.image_basis_v = image_from_pattern * lattice[1];
     return out;
+}
+
+fn manual_srgb(color: vec4<f32>) -> vec4<f32> {
+#ifdef MANUAL_SRGB
+    return vec4(pow(max(color.rgb, vec3(0.0)), vec3(1.0 / 2.2)), color.a);
+#else
+    return color;
+#endif
 }
 
 @fragment
 fn fragment(in: TiledVertexOutput) -> @location(0) vec4<f32> {
-    var tile_position = in.tile_position;
-    let cell_size = in.image_size + material.spacing;
+    let cell = floor(in.lattice_position);
+    let image_from_lattice = mat2x2(in.image_basis_u, in.image_basis_v);
+    let image_position = image_from_lattice * (in.lattice_position - cell - 0.5) + 0.5;
 
-    // Explicit gradients avoid seams and WebGPU's ban on implicit derivatives in branches.
-    let uv_scale = 1.0 / in.image_size;
-    let ddx = dpdx(tile_position) * uv_scale;
-    let ddy = dpdy(tile_position) * uv_scale;
+    // Derive gradients from the continuous lattice coordinates, not the wrapped image position.
+    let ddx = image_from_lattice * dpdx(in.lattice_position);
+    let ddy = image_from_lattice * dpdy(in.lattice_position);
 
-    let row = floor(tile_position.y / cell_size.y);
-    tile_position.x += row * material.stagger * cell_size.x;
+    if material.checkerboard_parity >= 0
+        && ((i32(cell.x) + i32(cell.y)) & 1) != material.checkerboard_parity
+    {
+        return vec4(0.0);
+    }
 
-    let cell_position = tile_position - floor(tile_position / cell_size) * cell_size;
-
-    if all(cell_position >= vec2(0.0)) && all(cell_position < in.image_size) {
-        return textureSampleGrad(
-            pattern_texture,
-            pattern_sampler,
-            cell_position / in.image_size,
-            ddx,
-            ddy,
-        ) * material.color;
+    if all(image_position >= vec2(0.0)) && all(image_position < vec2(1.0)) {
+        return manual_srgb(
+            textureSampleGrad(
+                pattern_texture,
+                pattern_sampler,
+                image_position,
+                ddx,
+                ddy,
+            ) * material.color,
+        );
     }
 
     return vec4(0.0);

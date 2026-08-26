@@ -16,13 +16,18 @@ fn setup(
 ) {
     commands.spawn(Camera2d);
 
+    let rotation = -20f32.to_radians();
+    let cell_size = Vec2::new(165.0, 147.0);
     let material = materials.add(TiledBackgroundMaterial {
         color: Color::WHITE.with_alpha(0.15).into(),
-        scale: 0.5,
-        rotation: 20f32.to_radians(),
-        stagger: 0.5,
-        spacing: 40.,
-        scroll_speed: Vec2::new(30.0, 0.0),
+        image_scale: 0.5,
+        image_rotation: rotation,
+        lattice: Mat2::from_angle(rotation)
+            * Mat2::from_cols(
+                Vec2::new(cell_size.x, 0.0),
+                Vec2::new(-cell_size.x * 0.5, cell_size.y),
+            ),
+        scroll_velocity: Vec2::new(30.0, 0.0),
         pattern_texture: asset_server.load("background_logo.png"),
         ..default()
     });

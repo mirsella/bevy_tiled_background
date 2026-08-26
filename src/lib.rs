@@ -1,7 +1,8 @@
 //! A Bevy plugin for creating tiled, animated UI backgrounds.
 //!
 //! This crate provides a `UiMaterial` implementation that renders a repeating pattern
-//! with support for rotation, staggering, spacing, and scrolling animation.
+//! with an explicit lattice, independent image rotation, checkerboards, cover scaling, and
+//! scrolling.
 //!
 //! # Example
 //!
@@ -23,13 +24,18 @@
 //! ) {
 //!     commands.spawn(Camera2d);
 //!
+//!     let rotation = -35f32.to_radians();
+//!     let cell_size = Vec2::new(165.0, 147.0);
 //!     let material = materials.add(TiledBackgroundMaterial {
 //!         color: LinearRgba::WHITE,
-//!         scale: 0.5,
-//!         rotation: 35f32.to_radians(),
-//!         stagger: 0.5,
-//!         spacing: 10.0,
-//!         scroll_speed: Vec2::new(20.0, 0.0),
+//!         image_scale: 0.5,
+//!         image_rotation: rotation,
+//!         lattice: Mat2::from_angle(rotation)
+//!             * Mat2::from_cols(
+//!                 Vec2::new(cell_size.x, 0.0),
+//!                 Vec2::new(-cell_size.x * 0.5, cell_size.y),
+//!             ),
+//!         scroll_velocity: Vec2::new(20.0, 0.0),
 //!         pattern_texture: asset_server.load("my_pattern.png"),
 //!         ..default()
 //!     });
@@ -83,21 +89,37 @@ pub struct TiledBackgroundMaterial {
     /// Tint color multiplied with the pattern texture. Use white for no tint.
     #[uniform(0)]
     pub color: LinearRgba,
-    /// Size multiplier for tiles. `1.0` = native texture size.
+    /// Image size multiplier. `1.0` uses the texture's native size. Must be positive.
     #[uniform(0)]
-    pub scale: f32,
-    /// Rotation angle in radians.
+    pub image_scale: f32,
+    /// Clockwise image rotation in radians, independent of the lattice orientation.
     #[uniform(0)]
-    pub rotation: f32,
-    /// Row offset for brick-like patterns. `0.5` = half-tile shift.
+    pub image_rotation: f32,
+    /// Cell basis vectors in local or reference pixels.
+    ///
+    /// The columns point from one cell center to its two neighbors. [`Mat2::ZERO`] uses an
+    /// axis-aligned lattice matching the scaled texture's native size. Any other value must be
+    /// finite and invertible.
     #[uniform(0)]
-    pub stagger: f32,
-    /// Gap between images in pixels. `0.0` = no gaps.
+    pub lattice: Mat2,
+    /// Center of lattice cell `(0, 0)`.
+    ///
+    /// Coordinates are relative to the node center, or to the reference's top-left corner when
+    /// [`Self::reference_size`] enables cover scaling.
     #[uniform(0)]
-    pub spacing: f32,
-    /// Animation speed in pixels per second.
+    pub origin: Vec2,
+    /// Design dimensions to cover and crop over the node.
+    ///
+    /// Set both dimensions to positive values to enable this mode, or use [`Vec2::ZERO`] for
+    /// local node coordinates.
     #[uniform(0)]
-    pub scroll_speed: Vec2,
+    pub reference_size: Vec2,
+    /// Visual animation velocity in logical screen pixels per second.
+    #[uniform(0)]
+    pub scroll_velocity: Vec2,
+    /// Checkerboard cells to draw: `-1` draws all cells, `0` even cells, and `1` odd cells.
+    #[uniform(0)]
+    pub checkerboard_parity: i32,
     /// Pixel scale used to convert physical render pixels to logical UI pixels.
     ///
     /// This is managed by [`TiledBackgroundPlugin`]. Leave it at `1.0` when
@@ -114,11 +136,13 @@ impl Default for TiledBackgroundMaterial {
     fn default() -> Self {
         Self {
             color: LinearRgba::WHITE,
-            scale: 1.0,
-            rotation: 0.0,
-            stagger: 0.0,
-            spacing: 0.0,
-            scroll_speed: Vec2::ZERO,
+            image_scale: 1.0,
+            image_rotation: 0.0,
+            lattice: Mat2::ZERO,
+            origin: Vec2::ZERO,
+            reference_size: Vec2::ZERO,
+            scroll_velocity: Vec2::ZERO,
+            checkerboard_parity: -1,
             pixel_scale: 1.0,
             pattern_texture: Handle::default(),
         }
