@@ -4,7 +4,8 @@ struct TiledMaterial {
     color: vec4<f32>,
     image_scale: f32,
     image_rotation: f32,
-    lattice: mat2x2<f32>,
+    lattice_x_axis: vec2<f32>,
+    lattice_y_axis: vec2<f32>,
     origin: vec2<f32>,
     reference_size: vec2<f32>,
     scroll_velocity: vec2<f32>,
@@ -48,7 +49,7 @@ fn vertex(
     }
 
     let image_size = vec2<f32>(textureDimensions(pattern_texture)) * material.image_scale;
-    var lattice = material.lattice;
+    var lattice = mat2x2(material.lattice_x_axis, material.lattice_y_axis);
     if all(lattice[0] == vec2(0.0)) && all(lattice[1] == vec2(0.0)) {
         lattice = mat2x2(
             vec2(image_size.x, 0.0),

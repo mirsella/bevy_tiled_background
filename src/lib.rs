@@ -26,15 +26,17 @@
 //!
 //!     let rotation = -35f32.to_radians();
 //!     let cell_size = Vec2::new(165.0, 147.0);
+//!     let lattice = Mat2::from_angle(rotation)
+//!         * Mat2::from_cols(
+//!             Vec2::new(cell_size.x, 0.0),
+//!             Vec2::new(-cell_size.x * 0.5, cell_size.y),
+//!         );
 //!     let material = materials.add(TiledBackgroundMaterial {
 //!         color: LinearRgba::WHITE,
 //!         image_scale: 0.5,
 //!         image_rotation: rotation,
-//!         lattice: Mat2::from_angle(rotation)
-//!             * Mat2::from_cols(
-//!                 Vec2::new(cell_size.x, 0.0),
-//!                 Vec2::new(-cell_size.x * 0.5, cell_size.y),
-//!             ),
+//!         lattice_x_axis: lattice.x_axis,
+//!         lattice_y_axis: lattice.y_axis,
 //!         scroll_velocity: Vec2::new(20.0, 0.0),
 //!         pattern_texture: asset_server.load("my_pattern.png"),
 //!         ..default()
@@ -95,13 +97,16 @@ pub struct TiledBackgroundMaterial {
     /// Clockwise image rotation in radians, independent of the lattice orientation.
     #[uniform(0)]
     pub image_rotation: f32,
-    /// Cell basis vectors in local or reference pixels.
+    /// Vector from a cell center to its neighbor at `(1, 0)`, in local or reference pixels.
     ///
-    /// The columns point from one cell center to its two neighbors. [`Mat2::ZERO`] uses an
-    /// axis-aligned lattice matching the scaled texture's native size. Any other value must be
-    /// finite and invertible.
+    /// When both lattice axes are [`Vec2::ZERO`], the material uses an axis-aligned lattice
+    /// matching the scaled texture's native size. Otherwise, both axes must be finite and form an
+    /// invertible basis.
     #[uniform(0)]
-    pub lattice: Mat2,
+    pub lattice_x_axis: Vec2,
+    /// Vector from a cell center to its neighbor at `(0, 1)`, in local or reference pixels.
+    #[uniform(0)]
+    pub lattice_y_axis: Vec2,
     /// Center of lattice cell `(0, 0)`.
     ///
     /// Coordinates are relative to the node center, or to the reference's top-left corner when
@@ -138,7 +143,8 @@ impl Default for TiledBackgroundMaterial {
             color: LinearRgba::WHITE,
             image_scale: 1.0,
             image_rotation: 0.0,
-            lattice: Mat2::ZERO,
+            lattice_x_axis: Vec2::ZERO,
+            lattice_y_axis: Vec2::ZERO,
             origin: Vec2::ZERO,
             reference_size: Vec2::ZERO,
             scroll_velocity: Vec2::ZERO,

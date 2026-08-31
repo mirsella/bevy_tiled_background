@@ -64,15 +64,17 @@ fn setup(
 
     let rotation = -20f32.to_radians();
     let cell_size = Vec2::new(165.0, 147.0);
+    let lattice = Mat2::from_angle(rotation)
+        * Mat2::from_cols(
+            Vec2::new(cell_size.x, 0.0),
+            Vec2::new(-cell_size.x * 0.5, cell_size.y),
+        );
     let material = materials.add(TiledBackgroundMaterial {
         color: Color::WHITE.with_alpha(0.15).into(),
         image_scale: 0.5,
         image_rotation: rotation,
-        lattice: Mat2::from_angle(rotation)
-            * Mat2::from_cols(
-                Vec2::new(cell_size.x, 0.0),
-                Vec2::new(-cell_size.x * 0.5, cell_size.y),
-            ),
+        lattice_x_axis: lattice.x_axis,
+        lattice_y_axis: lattice.y_axis,
         scroll_velocity: Vec2::new(30.0, 0.0),
         pattern_texture: asset_server.load("background_logo.png"),
         ..default()
@@ -103,7 +105,8 @@ cargo run --example simple
 | `color` | `LinearRgba` | Tint multiplied with the texture. Use white for no tint; alpha controls opacity. |
 | `image_scale` | `f32` | Positive image size multiplier. `1.0` uses the texture's native size. |
 | `image_rotation` | `f32` | Clockwise image rotation in radians, independent of the lattice. |
-| `lattice` | `Mat2` | Invertible cell basis in local or reference pixels. `Mat2::ZERO` uses the scaled texture's native size. |
+| `lattice_x_axis` | `Vec2` | Vector from a cell center to its neighbor at `(1, 0)`. |
+| `lattice_y_axis` | `Vec2` | Vector from a cell center to its neighbor at `(0, 1)`. Setting both axes to zero uses the scaled texture's native size. |
 | `origin` | `Vec2` | Center of cell `(0, 0)`, relative to the node center or reference top-left corner. |
 | `reference_size` | `Vec2` | Positive design dimensions used to cover and crop the node. `Vec2::ZERO` disables this mode. |
 | `scroll_velocity` | `Vec2` | Visual pattern velocity in logical screen pixels per second. |
@@ -111,7 +114,7 @@ cargo run --example simple
 | `pattern_texture` | `Handle<Image>` | Texture image to repeat. |
 | `pixel_scale` | `f32` | Plugin-managed window scale conversion. Leave this at the default value. |
 
-`lattice.x_axis` and `lattice.y_axis` point from the center of cell `(0, 0)` to the centers of cells `(1, 0)` and `(0, 1)`. Rotate both the lattice and `image_rotation` to rotate the whole pattern. Change only `image_rotation` to turn each image inside fixed cells.
+The lattice axes must form an invertible basis unless both are zero. Rotate both axes and `image_rotation` to rotate the whole pattern. Change only `image_rotation` to turn each image inside fixed cells.
 
 With a positive `reference_size`, lattice and origin values use reference pixels measured from its top-left corner. The shader cover-scales that reference rectangle over the node. `scroll_velocity` remains in logical screen pixels per second.
 
