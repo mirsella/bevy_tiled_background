@@ -118,6 +118,30 @@ The lattice axes must form an invertible basis unless both are zero. Rotate both
 
 With a positive `reference_size`, lattice and origin values use reference pixels measured from its top-left corner. The shader cover-scales that reference rectangle over the node. `scroll_velocity` remains in logical screen pixels per second.
 
+## Automatic sparse-pattern optimization
+
+The plugin automatically draws individual image quads for sparse, untransformed
+fullscreen patterns. It uses stock Bevy's public rendering APIs and draws the
+calculated tile count. No engine patch or opt-in feature is required.
+
+The original `MaterialNode<TiledBackgroundMaterial>` remains attached. Updating
+or replacing its material still changes the background; removing it stops
+drawing. Tint, scrolling, checkerboard selection, cover scaling, and the host's
+color-space handling are preserved.
+
+Dense patterns, automatic lattices, cropped or transformed nodes, and grids over
+512 cells retain the original shader. The reference draw also remains active
+while the optimized GPU material or pipeline is loading. These cases retain
+their features but do not receive the sparse-geometry speedup.
+
+For a reference comparison, add
+`bevy_tiled_background::instancing::TiledBackgroundMode::Reference` to a node.
+Removing that component restores automatic selection. Selection runs in
+`UpdateTiledBackgroundGeometry`, after UI layout and before asset extraction.
+
+The optional `mightyminions` feature adapts the project's extended clipping API.
+It is only for that engine fork; stock Bevy uses the default feature set.
+
 ## Bevy compatibility
 
 | Bevy | bevy_tiled_background |

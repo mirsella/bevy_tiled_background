@@ -53,14 +53,18 @@
 //! }
 //! ```
 
+#![recursion_limit = "256"]
+
 use bevy::{
     asset::embedded_asset,
     prelude::*,
-    render::render_resource::AsBindGroup,
+    render::render_resource::{AsBindGroup, ShaderType},
     shader::ShaderRef,
     ui_render::ui_material::UiMaterial,
     window::{PrimaryWindow, WindowScaleFactorChanged},
 };
+
+pub mod instancing;
 
 /// Plugin that registers the [`TiledBackgroundMaterial`] for use in UI.
 pub struct TiledBackgroundPlugin;
@@ -81,55 +85,47 @@ impl Plugin for TiledBackgroundPlugin {
                             any_match_filter::<Changed<MaterialNode<TiledBackgroundMaterial>>>,
                         ),
                 ),
-            );
+            )
+            .add_plugins(instancing::plugin);
     }
 }
 
 /// A UI material that renders a tiled, animated pattern.
 #[derive(AsBindGroup, Asset, Debug, Clone, Reflect)]
+#[uniform(0, TiledBackgroundUniform)]
 pub struct TiledBackgroundMaterial {
     /// Tint color multiplied with the pattern texture. Use white for no tint.
-    #[uniform(0)]
     pub color: LinearRgba,
     /// Image size multiplier. `1.0` uses the texture's native size. Must be positive.
-    #[uniform(0)]
     pub image_scale: f32,
     /// Clockwise image rotation in radians, independent of the lattice orientation.
-    #[uniform(0)]
     pub image_rotation: f32,
     /// Vector from a cell center to its neighbor at `(1, 0)`, in local or reference pixels.
     ///
     /// When both lattice axes are [`Vec2::ZERO`], the material uses an axis-aligned lattice
     /// matching the scaled texture's native size. Otherwise, both axes must be finite and form an
     /// invertible basis.
-    #[uniform(0)]
     pub lattice_x_axis: Vec2,
     /// Vector from a cell center to its neighbor at `(0, 1)`, in local or reference pixels.
-    #[uniform(0)]
     pub lattice_y_axis: Vec2,
     /// Center of lattice cell `(0, 0)`.
     ///
     /// Coordinates are relative to the node center, or to the reference's top-left corner when
     /// [`Self::reference_size`] enables cover scaling.
-    #[uniform(0)]
     pub origin: Vec2,
     /// Design dimensions to cover and crop over the node.
     ///
     /// Set both dimensions to positive values to enable this mode, or use [`Vec2::ZERO`] for
     /// local node coordinates.
-    #[uniform(0)]
     pub reference_size: Vec2,
     /// Visual animation velocity in logical screen pixels per second.
-    #[uniform(0)]
     pub scroll_velocity: Vec2,
     /// Checkerboard cells to draw: `-1` draws all cells, `0` even cells, and `1` odd cells.
-    #[uniform(0)]
     pub checkerboard_parity: i32,
     /// Pixel scale used to convert physical render pixels to logical UI pixels.
     ///
     /// This is managed by [`TiledBackgroundPlugin`]. Leave it at `1.0` when
     /// constructing materials manually.
-    #[uniform(0)]
     pub pixel_scale: f32,
     /// The texture to tile.
     #[texture(1)]
@@ -155,6 +151,39 @@ impl Default for TiledBackgroundMaterial {
     }
 }
 
+/// The shader layout shared by reference, instanced, and composed backgrounds.
+/// Construct it from a material so every rendering path uses the same fields.
+#[derive(ShaderType, Clone, Copy, PartialEq)]
+pub struct TiledBackgroundUniform {
+    color: LinearRgba,
+    image_scale: f32,
+    image_rotation: f32,
+    lattice_x_axis: Vec2,
+    lattice_y_axis: Vec2,
+    origin: Vec2,
+    reference_size: Vec2,
+    scroll_velocity: Vec2,
+    checkerboard_parity: i32,
+    pixel_scale: f32,
+}
+
+impl From<&TiledBackgroundMaterial> for TiledBackgroundUniform {
+    fn from(pattern: &TiledBackgroundMaterial) -> Self {
+        Self {
+            color: pattern.color,
+            image_scale: pattern.image_scale,
+            image_rotation: pattern.image_rotation,
+            lattice_x_axis: pattern.lattice_x_axis,
+            lattice_y_axis: pattern.lattice_y_axis,
+            origin: pattern.origin,
+            reference_size: pattern.reference_size,
+            scroll_velocity: pattern.scroll_velocity,
+            checkerboard_parity: pattern.checkerboard_parity,
+            pixel_scale: pattern.pixel_scale,
+        }
+    }
+}
+
 impl UiMaterial for TiledBackgroundMaterial {
     fn vertex_shader() -> ShaderRef {
         "embedded://bevy_tiled_background/tiled_background.wgsl".into()
@@ -173,7 +202,6 @@ fn update_tiled_background_pixel_scale(
     if backgrounds.is_empty() {
         return;
     }
-
     let Ok(window) = windows.single() else {
         return warn_once!(
             "tiled background scale update skipped because the primary window is missing"
@@ -188,8 +216,8 @@ fn update_tiled_background_pixel_scale(
         );
     }
 
-    for material_node in &backgrounds {
-        let Some(mut material) = materials.get_mut(&material_node.0) else {
+    for handle in backgrounds.iter().map(|node| &node.0) {
+        let Some(mut material) = materials.get_mut(handle) else {
             warn_once!("tiled background material asset is missing");
             continue;
         };
